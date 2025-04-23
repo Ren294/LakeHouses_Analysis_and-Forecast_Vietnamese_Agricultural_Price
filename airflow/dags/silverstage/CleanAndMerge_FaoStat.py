@@ -5,6 +5,7 @@ from pyspark.sql.types import *
 from functools import reduce
 from .common import read_from_hudi, write_to_hudi, create_spark_session
 from .config import get_selected_items_faostat
+import re
 
 
 def create_pivot(df, suffix="year"):
@@ -113,11 +114,12 @@ def sanitize_column_names(df):
 
 def FaoStatSilver(path):
     spark = create_spark_session("CleanAndMerge_FaoStat")
+    bronze_path = "s3a://bronze/faostat_data/"
     selected_items = get_selected_items_faostat()
-    merged_df = process_and_merge_tables(spark, path, selected_items)
+    merged_df = process_and_merge_tables(spark, bronze_path, selected_items)
     merged_df = sanitize_column_names(merged_df)
     # merged_df.write.csv("/Users/ren/Downloads/Data/faostat/data/test3")
-    write_to_hudi(merged_df, "faostat_merged",
+    write_to_hudi(merged_df,  "faostat_merged",
                   path, partitionpath="ElementCode")
     spark.stop()
     print("Successfully merged and saved FAOSTAT data")

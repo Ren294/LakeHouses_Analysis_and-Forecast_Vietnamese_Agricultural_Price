@@ -8,13 +8,12 @@ from .common import read_from_hudi, write_to_hudi, create_spark_session
 
 def WeatherSilver(path):
     spark = create_spark_session("CleanAndMerge_Weather")
-    path_bronze = "s3a://bronze/weather_data"
     final_df = None
 
     year = 2023
     while (year > 1990):
         try:
-            spark_df = read_from_hudi(spark, path_bronze, year)
+            spark_df = read_from_hudi(spark, path, year)
             final_df = spark_df if final_df is None else final_df.union(
                 spark_df)
             print(f"Complet merge weather table in {year}")

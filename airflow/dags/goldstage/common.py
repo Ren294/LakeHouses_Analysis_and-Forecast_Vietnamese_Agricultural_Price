@@ -35,7 +35,7 @@ def create_spark_session(appName):
                 "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider") \
         .config("spark.sql.warehouse.dir", warehouse_dir) \
         .config("javax.jdo.option.ConnectionDriverName", "org.postgresql.Driver") \
-        .config("javax.jdo.option.ConnectionURL", "jdbc:postgresql://localhost:5431/metastore") \
+        .config("javax.jdo.option.ConnectionURL", "jdbc:postgresql://host.docker.internal:5431/metastore") \
         .config("javax.jdo.option.ConnectionUserName", "postgres") \
         .config("javax.jdo.option.ConnectionPassword", "postgres") \
         .config("spark.sql.hive.metastore.version", "2.3.9") \
