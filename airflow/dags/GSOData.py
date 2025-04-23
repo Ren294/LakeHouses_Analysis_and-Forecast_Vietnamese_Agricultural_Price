@@ -26,13 +26,13 @@ dag = DAG(
     catchup=False,
 )
 
-bronze_gso = PythonOperator(
-    task_id="load_gso_bronze",
-    python_callable=GSOBronze,
-    provide_context=True,
-    op_kwargs={"path": gso_paths["GSO_bronze_path"]},
-    dag=dag,
-)
+# bronze_gso = PythonOperator(
+#     task_id="load_gso_bronze",
+#     python_callable=GSOBronze,
+#     provide_context=True,
+#     op_kwargs={"path": gso_paths["GSO_bronze_path"]},
+#     dag=dag,
+# )
 
 silver_gso = PythonOperator(
     task_id="load_gso_silver",
@@ -50,4 +50,5 @@ gold_gso = PythonOperator(
     dag=dag,
 )
 
-bronze_gso >> silver_gso >> gold_gso
+# bronze_gso >> silver_gso >> gold_gso
+silver_gso >> gold_gso

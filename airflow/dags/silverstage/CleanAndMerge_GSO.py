@@ -81,8 +81,8 @@ def add_yield_column(spark, erged_df, crop, year_columns, path_bronze):
                                        merged_df.year == df_yield.year_y),
                                    "left").drop("year_y").drop("cities_y")
     except:
-        merged_df = merged_df.withColumn("yield", F.round(
-            F.col("production") * 10 / F.col("area"), 1))
+        merged_df = merged_df.withColumn("yield",
+                                         F.round(F.col("production") * 10 / F.col("area"), 1))
     return merged_df
 
 

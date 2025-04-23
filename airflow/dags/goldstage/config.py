@@ -1,5 +1,5 @@
 config_minio = {
-    "endpoint": "http://localhost:8999",
+    "endpoint": "http://host.docker.internal:8999",
     "access_key": "minioadmin",
     "secret_key": "minioadmin",
 }

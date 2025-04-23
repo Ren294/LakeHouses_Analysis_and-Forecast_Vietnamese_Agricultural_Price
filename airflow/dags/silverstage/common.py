@@ -46,7 +46,7 @@ def write_to_hudi(df, table_name, s3_base_path, partitionpath, operation="upsert
         .save(s3_path)
 
 
-def read_from_hudi(spark, base_path, table_name):
+def read_from_hudi(spark,  table_name, base_path):
     s3_path = f"{base_path}/{table_name}"
 
     df = spark.read.format("hudi").load(s3_path)
