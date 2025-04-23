@@ -28,7 +28,8 @@ def create_spark_session(appName):
     return spark
 
 
-def write_to_hudi(df, table_name, s3_base_path, partitionpath, operation="upsert", recordkey="record_id", precombine="timestamp"):
+def write_to_hudi(df, table_name, s3_base_path, partitionpath, operation="upsert", recordkey="record_id", 
+                  precombine="timestamp", mode="overwrite"):
     hudi_options = {
         "hoodie.table.name": table_name,
         "hoodie.datasource.write.recordkey.field": recordkey,
@@ -42,5 +43,5 @@ def write_to_hudi(df, table_name, s3_base_path, partitionpath, operation="upsert
 
     df.write.format("hudi") \
         .options(**hudi_options) \
-        .mode("overwrite") \
+        .mode(mode) \
         .save(s3_path)
