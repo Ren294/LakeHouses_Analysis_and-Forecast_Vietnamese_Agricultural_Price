@@ -122,3 +122,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ignore ALL files in ANY directory named minio/data/
+minio/data/
+postgres/data/
+airflow/config
+airflow/logs
+airflow/plungins
+airflow/data
+
+.gitignore
+# Local configuration files
