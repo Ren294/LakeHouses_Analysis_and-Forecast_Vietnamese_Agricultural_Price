@@ -3,8 +3,8 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, LongType, FloatType
 import faostat
 from pyspark.sql import DataFrame
-from common import create_spark_session, write_to_hudi
-from config import get_url_gos
+from .common import create_spark_session, write_to_hudi
+from .config import get_url_gos
 import pandas as pd
 from datetime import datetime
 import json

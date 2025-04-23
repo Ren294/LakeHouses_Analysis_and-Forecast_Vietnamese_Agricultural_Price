@@ -30,7 +30,7 @@ bronze_faostat = PythonOperator(
     task_id="load_faostat_bronze",
     python_callable=FaoStatBronze,
     provide_context=True,
-    op_kwargs={"path": faostat_paths.Faostat_bronze_path},
+    op_kwargs={"path": faostat_paths["Faostat_bronze_path"]},
     dag=dag,
 )
 
@@ -38,7 +38,7 @@ silver_faostat = PythonOperator(
     task_id="load_faostat_silver",
     python_callable=FaoStatSilver,
     provide_context=True,
-    op_kwargs={"path": faostat_paths.Faostat_silver_path},
+    op_kwargs={"path": faostat_paths["Faostat_silver_path"]},
     dag=dag,
 )
 
@@ -46,7 +46,7 @@ gold_faostat = PythonOperator(
     task_id="load_faostat_gold",
     python_callable=FaoStatGold,
     provide_context=True,
-    op_kwargs={"path": faostat_paths.Faostat_gold_path},
+    op_kwargs={"path": faostat_paths["Faostat_gold_path"]},
     dag=dag,
 )
 

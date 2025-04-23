@@ -14,26 +14,32 @@ Weather_bronze_path = f"{base_path_bronze}/weather_data"
 Weather_silver_path = f"{base_path_silver}/weather_data"
 Weather_gold_path = f"{base_path_gold}/fact_weather"
 
+faostat_paths = {
+    "Faostat_bronze_path": Faostat_bronze_path,
+    "Faostat_silver_path": Faostat_silver_path,
+    "Faostat_gold_path": Faostat_gold_path
+}
+
+gso_paths = {
+    "GSO_bronze_path": GSO_bronze_path,
+    "GSO_silver_path": GSO_silver_path,
+    "GSO_gold_path": GSO_gold_path
+}
+
+weather_paths = {
+    "Weather_bronze_path": Weather_bronze_path,
+    "Weather_silver_path": Weather_silver_path,
+    "Weather_gold_path": Weather_gold_path
+}
+
 
 def Faostat_paths():
-    return {
-        "Faostat_bronze_path": Faostat_bronze_path,
-        "Faostat_silver_path": Faostat_silver_path,
-        "Faostat_gold_path": Faostat_gold_path
-    }
+    return faostat_paths
 
 
 def GSO_paths():
-    return {
-        "GSO_bronze_path": GSO_bronze_path,
-        "GSO_silver_path": GSO_silver_path,
-        "GSO_gold_path": GSO_gold_path
-    }
+    return gso_paths
 
 
 def Weather_paths():
-    return {
-        "Weather_bronze_path": Weather_bronze_path,
-        "Weather_silver_path": Weather_silver_path,
-        "Weather_gold_path": Weather_gold_path
-    }
+    return weather_paths

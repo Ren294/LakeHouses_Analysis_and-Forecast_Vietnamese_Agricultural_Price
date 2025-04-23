@@ -3,8 +3,8 @@ from pyspark.sql.functions import col, lit, when, concat, regexp_replace, to_tim
 import pyspark.sql.functions as F
 from pyspark.sql.types import *
 from functools import reduce
-from common import read_from_hudi, write_to_hudi, create_spark_session
-from config import get_selected_items_faostat, get_crops_gos
+from .common import read_from_hudi, write_to_hudi, create_spark_session
+from .config import get_selected_items_faostat, get_crops_gos
 
 
 def read_data_for_crop(spark, crop, path_bronze):

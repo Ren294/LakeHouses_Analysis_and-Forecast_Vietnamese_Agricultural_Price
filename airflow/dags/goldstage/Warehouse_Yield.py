@@ -3,8 +3,8 @@ from pyspark.sql.functions import col, lit, when, concat, regexp_replace, to_tim
 import pyspark.sql.functions as F
 from pyspark.sql.types import *
 from functools import reduce
-from common import read_from_hudi, write_to_hudi, create_spark_session, create_table
-from config import get_code_crops
+from .common import read_from_hudi, write_to_hudi, create_spark_session, create_table
+from .config import get_code_crops
 
 
 def GSOGold(path):

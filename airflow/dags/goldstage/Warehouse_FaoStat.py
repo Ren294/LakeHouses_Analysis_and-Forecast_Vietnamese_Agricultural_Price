@@ -3,7 +3,7 @@ from pyspark.sql.functions import col, lit, when, concat, regexp_replace, to_tim
 import pyspark.sql.functions as F
 from pyspark.sql.types import *
 from functools import reduce
-from common import read_from_hudi, write_to_hudi, create_spark_session, create_table
+from .common import read_from_hudi, write_to_hudi, create_spark_session, create_table
 
 
 def create_fact_faostat(spark, path):

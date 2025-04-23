@@ -2,8 +2,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, LongType, FloatType
 import faostat
-from common import create_spark_session, write_to_hudi
-from config import get_parameter_sets_faostat
+from .common import create_spark_session, write_to_hudi
+from .config import get_parameter_sets_faostat
 
 
 def load_data_to_hudi(domain_code, record_id_cols, table_name, path):

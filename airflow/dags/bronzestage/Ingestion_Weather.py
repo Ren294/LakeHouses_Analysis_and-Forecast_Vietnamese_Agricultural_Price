@@ -3,8 +3,8 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, LongType, FloatType
 import faostat
 from pyspark.sql import DataFrame
-from common import create_spark_session, write_to_hudi
-from config import get_province, get_api_key_weather, get_weather_baseurl
+from .common import create_spark_session, write_to_hudi
+from .config import get_province, get_api_key_weather, get_weather_baseurl
 import requests
 from datetime import datetime, timedelta
 import re

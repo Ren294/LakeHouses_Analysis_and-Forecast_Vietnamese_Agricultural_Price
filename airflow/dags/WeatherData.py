@@ -19,7 +19,7 @@ default_args = {
 }
 
 dag = DAG(
-    "GSO_dag",
+    "Weather_dag",
     default_args=default_args,
     description="Collect, process and store GSO data",
     schedule_interval="@monthly",
@@ -27,26 +27,26 @@ dag = DAG(
 )
 
 bronze_weather = PythonOperator(
-    task_id="load_gso_bronze",
+    task_id="load_weather_bronze",
     python_callable=WeatherBronze,
     provide_context=True,
-    op_kwargs={"path": weather_paths.Weather_bronze_path},
+    op_kwargs={"path": weather_paths["Weather_bronze_path"]},
     dag=dag,
 )
 
 silver_weather = PythonOperator(
-    task_id="load_gso_bronze",
+    task_id="load_weather_silver",
     python_callable=WeatherSilver,
     provide_context=True,
-    op_kwargs={"path": weather_paths.Weather_silver_path},
+    op_kwargs={"path": weather_paths["Weather_silver_path"]},
     dag=dag,
 )
 
 gold_weather = PythonOperator(
-    task_id="load_faostat_bronze",
+    task_id="load_weather_gold",
     python_callable=WeatherGold,
     provide_context=True,
-    op_kwargs={"path": weather_paths.Weather_gold_path},
+    op_kwargs={"path": weather_paths["Weather_gold_path"]},
     dag=dag,
 )
 
