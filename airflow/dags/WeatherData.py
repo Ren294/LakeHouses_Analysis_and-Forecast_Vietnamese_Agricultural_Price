@@ -13,15 +13,15 @@ weather_paths = Weather_paths()
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(2024, 1, 1),
+    "start_date": datetime(2010, 1, 1),
     "retries": 1,
-    "retry_delay": timedelta(minutes=5),
+    "retry_delay": timedelta(days=1),
 }
 
 dag = DAG(
     "Weather_dag",
     default_args=default_args,
-    description="Collect, process and store GSO data",
+    description="Collect, process and store Weather data",
     schedule_interval="@monthly",
     catchup=False,
 )
@@ -38,7 +38,8 @@ silver_weather = PythonOperator(
     task_id="load_weather_silver",
     python_callable=WeatherSilver,
     provide_context=True,
-    op_kwargs={"path": weather_paths["Weather_silver_path"]},
+    op_kwargs={"inputpath": weather_paths["Weather_bronze_path"],
+                 "outputpath": weather_paths["Weather_silver_path"]},
     dag=dag,
 )
 
@@ -46,8 +47,9 @@ gold_weather = PythonOperator(
     task_id="load_weather_gold",
     python_callable=WeatherGold,
     provide_context=True,
-    op_kwargs={"path": weather_paths["Weather_gold_path"]},
+    op_kwargs={"inputpath": weather_paths["Weather_silver_path"],
+                 "outputpath": weather_paths["Weather_gold_path"]},
     dag=dag,
 )
 
-bronze_weather >> silver_weather >> gold_weather
+bronze_weather>>silver_weather>>gold_weather
