@@ -11,7 +11,9 @@ import json
 
 
 def GSOBronze(path):
+    print("Start Ingestion GSO data")
     spark = create_spark_session("Ingestion data from GSO")
+    print("Started spark session")
     for crop, measure_url in get_url_gos().items():
         for measure, url in measure_url.items():
             if url == None:
@@ -29,7 +31,7 @@ def GSOBronze(path):
             df['measure'] = measure
             spark_df = spark.createDataFrame(df)
             write_to_hudi(spark_df, f"gso_{measure}_{crop}_table",
-                          f"{path}/{crop}", recordkey="cities", precombine="datetime", partitionpath="cities")
+                          f"{path}/{crop}", recordkey="cities", partitionpath="cities")
             print(f"Data written to {measure} of \
               {crop} table in MinIO successfully.")
     spark.stop()
