@@ -57,7 +57,7 @@ def create_fact_faostat(spark, path):
                 "ProducerPrice_USD_tonne_USD_month")
         )
 
-        write_to_hudi(fact_faostat, "fact_faostat", path, "DateINT",
+        write_to_hudi(fact_faostat, "fact_faostat", path,
                       recordkey="recordid", precombine="DateINT")
 
         create_table(spark, "fact_faostat", path)

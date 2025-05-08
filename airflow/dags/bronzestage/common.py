@@ -1,8 +1,4 @@
 from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, LongType, FloatType
-import faostat
-from pyspark.sql import DataFrame
 from .config import get_config_minio
 
 s3_config = get_config_minio()

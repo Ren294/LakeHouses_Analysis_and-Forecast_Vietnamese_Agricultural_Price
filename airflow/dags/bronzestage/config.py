@@ -106,7 +106,7 @@ province = {
 }
 
 config_minio = {
-    "endpoint": "http://host.docker.internal:8999",
+    "endpoint": "http://host.docker.internal:9000",
     "access_key": "minioadmin",
     "secret_key": "minioadmin",
 }
@@ -114,15 +114,16 @@ config_minio = {
 config_weather = {
     "weatherapi": {
         "base_url": "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/",
-        "api_key": [
-            "URY5J8GBA74X6LQSSVKW6TXPF",
-            "KUX7JH47KH5SJZVBZDAP3RSQC",
-            "NYG9SB5AKNYBCXF7CZ9FA3C95",
+        "api_key": [                  
+            "NYG9SB5AKNYBCXF7CZ9FA3C95", 
             "2YE4MG8WMKQF774E4MSVPWTYG",
             "PR976WBKEMXM5JXWHZBR2HR3X",
             "ENSKPNRLN5KPFX32KHMPNWV3X"
         ],
-        "apI_key_used": []
+        "api_key_used": [            
+            "URY5J8GBA74X6LQSSVKW6TXPF",
+            "KUX7JH47KH5SJZVBZDAP3RSQC"                
+]
     }
 }
 
@@ -139,6 +140,15 @@ parameter_sets = [
         "ElementCode", "ItemCode", "YearCode", "MonthsCode"], "table_name": "price_pp"}
 ]
 
+def choice_column():
+    return [
+        "cities", "datetime", "tempmax", "tempmin", "temp", "feelslikemax",
+        "feelslikemin", "feelslike", "dew", "humidity", "precip", "precipprob",
+        "precipcover", "preciptype", "snow", "snowdepth", "windgust", "windspeed",
+        "winddir", "sealevelpressure", "cloudcover", "visibility", "solarradiation",
+        "solarenergy", "uvindex", "severerisk", "sunrise", "sunset", "moonphase",
+        "conditions", "description", "icon", "stations"
+    ]
 
 def get_parameter_sets_faostat():
     return parameter_sets

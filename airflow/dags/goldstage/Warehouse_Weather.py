@@ -6,10 +6,10 @@ from functools import reduce
 from .common import read_from_hudi, write_to_hudi, create_spark_session, create_table
 
 
-def WeatherGold(path):
+def WeatherGold(inputpath, outputpath):
     spark = create_spark_session("Warehouse_Weather")
     spark_df = read_from_hudi(
-        spark, "s3a://silver/weather_data", "weather_merged")
+        spark, inputpath, "weather_merged")
     dim_provice = spark.sql(
         "SELECT ProviceCode,ProviceName FROM default.dim_provice")
     spark_df = spark_df.join(dim_provice, on="ProviceName", how="inner")
@@ -19,9 +19,9 @@ def WeatherGold(path):
     spark_df = spark_df.withColumn("recordId", F.concat(
         F.col("ProviceCode"), F.lit("_"), F.col("DateInt")))
     spark_df
-    write_to_hudi(spark_df, "fact_weather", path, partitionpath="ProviceCode",
+    write_to_hudi(spark_df, "fact_weather", outputpath,
                   recordkey="recordId", precombine="Datetime")
-    create_table(spark, "fact_weather", path)
+    create_table(spark, "fact_weather", outputpath)
     spark.stop()
 
 

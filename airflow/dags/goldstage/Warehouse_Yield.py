@@ -7,10 +7,10 @@ from .common import read_from_hudi, write_to_hudi, create_spark_session, create_
 from .config import get_code_crops
 
 
-def GSOGold(path):
+def GSOGold(inputpath, outputpath):
     spark = create_spark_session("Warehouse_Yield")
     code_crops_list = get_code_crops()
-    df = read_from_hudi(spark, "s3a://silver", "gso_data/gso_merged")
+    df = read_from_hudi(spark, inputpath, "gso_merged")
     df_code_crops = spark.createDataFrame(
         code_crops_list, ["crop", "CropsCode"])
     df = df.join(df_code_crops, "crop")\
@@ -30,9 +30,11 @@ def GSOGold(path):
         .withColumnRenamed("production", "Production_ThousT_year") \
         .withColumnRenamed("area", "Area_ThousHa_year") \
         .withColumnRenamed("yield", "Yield_QuintalPerHa_year")
-    write_to_hudi(df, "fact_yeild", path, recordkey="recordId",
-                  partitionpath="ProviceCode", precombine="timestamp")
-    create_table(spark, "fact_yield", "s3a://gold/warehouse/fact_yield")
+    
+    
+    write_to_hudi(df, "fact_yeild", outputpath, recordkey="recordId",
+                  precombine="timestamp")
+    create_table(spark, "fact_yield", outputpath)
     spark.stop()
 
 

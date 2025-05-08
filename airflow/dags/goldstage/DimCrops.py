@@ -3,30 +3,20 @@ from pyspark.sql.functions import col, lit, when, concat, regexp_replace, to_tim
 import pyspark.sql.functions as F
 from pyspark.sql.types import *
 from functools import reduce
-from common import write_to_hudi, create_spark_session, create_table
-from config import get_selected_items_faostat
+from .common import write_to_hudi, create_spark_session, create_table
+from .config import get_selected_items_faostat
 import pandas as pd
 from datetime import datetime
 import json
-import faostat
+import requests
 
 
 def read_data_crops():
-    all_items = []
-    datasets = faostat.list_datasets()
-
-    for dataset in datasets[1:]:
-        code = dataset[0]
-        label = dataset[1]
-        print(f"Processing dataset: {label} (Code: {code})")
-        try:
-            items = faostat.get_par_df(code, 'item')
-            items['dataset_code'] = code
-            items['dataset_label'] = label
-            all_items.append(items)
-        except Exception as e:
-            print(f"Lỗi khi lấy item cho dataset {label}: {e}")
-    return pd.concat(all_items, ignore_index=True)
+    url = "https://faostatservices.fao.org/api/v1/en/definitions/types/item"
+    response = requests.get(url)
+    data = response.json()
+    items = data.get("data", [])
+    return pd.DataFrame(items)
 
 
 def process_and_write_data(spark, path):
@@ -57,8 +47,7 @@ def process_and_write_data(spark, path):
     create_table(spark, "dim_crops", path)
 
 
-if __name__ == "__main__":
-    path = "s3a://gold/warehouse/dim_crops"
+def DimCropsGold(path):
     spark = create_spark_session("DimCrops")
     process_and_write_data(spark, path)
     spark.stop()

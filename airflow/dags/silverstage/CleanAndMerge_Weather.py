@@ -6,20 +6,20 @@ from functools import reduce
 from .common import read_from_hudi, write_to_hudi, create_spark_session
 
 
-def WeatherSilver(path):
+def WeatherSilver(inputpath, outputpath):
     spark = create_spark_session("CleanAndMerge_Weather")
     final_df = None
 
-    year = 2023
+    year = 2025
     while (year > 1990):
         try:
-            spark_df = read_from_hudi(spark, path, year)
+            spark_df = read_from_hudi(spark, year, inputpath)
             final_df = spark_df if final_df is None else final_df.union(
                 spark_df)
             print(f"Complet merge weather table in {year}")
             year = year - 1
-        except:
-            break
+        except Exception as e:
+            year = year - 1
 
     columns = ["cities", "datetime", "tempmax", "tempmin", "temp", "windgust", "windspeed",
                "winddir", "dew", "humidity", "precip", "precipprob", "precipcover", "uvindex", "solarenergy", "severerisk"]
@@ -28,9 +28,9 @@ def WeatherSilver(path):
         .selectExpr([f"`{col}` as `{col.capitalize()}`" for col in columns])\
         .withColumnRenamed("Cities", "ProviceName")\
         .withColumn("ProviceName", F.regexp_replace(F.col("ProviceName"), "Đ", "D"))\
-        .withColumn("recordId", F.concat(F.col("ProviceName"), F.col("Datetime")))
+        .withColumn("recordId", F.concat(F.col("ProviceName"),F.lit("_"),  F.col("Datetime")))
     final_df.printSchema()
-    write_to_hudi(final_df, "weather_merged", path,
+    write_to_hudi(final_df, "weather_merged", outputpath,
                   partitionpath="ProviceName", precombine="Datetime", recordkey="recordId")
     spark.stop()
 
