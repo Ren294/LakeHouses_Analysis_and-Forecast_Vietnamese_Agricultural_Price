@@ -8,15 +8,12 @@ from .config import get_selected_items_faostat, get_crops_gos
 
 
 def read_data_for_crop(spark, crop, path_bronze):
-    df_prod = spark.read.format("hudi").load(
-        f"{path_bronze}{crop}/gso_production_{crop}_table")
-    df_area = spark.read.format("hudi").load(
-        f"{path_bronze}{crop}/gso_planted_area_{crop}_table")
+    df_prod = read_from_hudi(spark,f"gso_production_{crop}_table", f"{path_bronze}/{crop}")
+    df_area = read_from_hudi(spark,f"gso_planted_area_{crop}_table", f"{path_bronze}/{crop}")
     return df_prod, df_area
 
-
 def process_year_columns(df, year_columns):
-    for col_name in year_columns:
+    for col_name in year_columns:   
         df = df.withColumn(col_name, F.col(col_name).cast("float"))
 
     first_year = int(year_columns[0].split('_')[1])
@@ -57,7 +54,7 @@ def merge_data(df_prod, df_area):
     return merged_df
 
 
-def add_yield_column(spark, erged_df, crop, year_columns, path_bronze):
+def add_yield_column(spark, merged_df, crop, year_columns, path_bronze):
     try:
         df_yield = spark.read.format("hudi").load(
             f"{path_bronze}{crop}/gso_yield_{crop}_table")
@@ -92,12 +89,11 @@ def finalize_data(final_df):
         .withColumn("timestamp", F.current_timestamp())
 
 
-def GSOSilver(path):
+def GSOSilver(inputpath, outputpath):
     spark = create_spark_session("CleanAndMerge_FaoStat")
-    path_bronze = "s3a://bronze/gso_data/"
     final_df = None
     for crop in get_crops_gos():
-        df_prod, df_area = read_data_for_crop(spark, crop, path_bronze)
+        df_prod, df_area = read_data_for_crop(spark, crop, inputpath)
 
         year_columns = [
             col for col in df_prod.columns if col.startswith('year_')]
@@ -108,13 +104,13 @@ def GSOSilver(path):
 
         merged_df = merge_data(df_prod, df_area)
         merged_df = add_yield_column(
-            spark, merged_df, crop, year_columns, path_bronze)
+            spark, merged_df, crop, year_columns, inputpath)
 
         final_df = merged_df if final_df is None else final_df.union(merged_df)
 
     final_df = finalize_data(final_df)
 
-    write_to_hudi(final_df, "gso_merged", path, partitionpath="cities")
+    write_to_hudi(final_df, "gso_merged", outputpath, partitionpath="cities")
     spark.stop()
 
 

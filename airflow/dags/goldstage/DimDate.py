@@ -2,8 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lit, when, concat, regexp_replace, to_timestamp, date_format, monotonically_increasing_id
 import pyspark.sql.functions as F
 from pyspark.sql.types import *
-from functools import reduce
-from common import write_to_hudi, create_spark_session, create_table
+from .common import write_to_hudi, create_spark_session, create_table
 import pandas as pd
 from datetime import datetime
 import json
@@ -68,12 +67,11 @@ def create_dim_date(spark, path):
     dim_date_df = generate_dim_date("1970-01-01", "2030-01-01")
     spark_df = spark.createDataFrame(dim_date_df, schema=schema)
     write_to_hudi(spark_df, "dim_date", path,
-                  recordkey="DateINT", partitionpath="Year,Month", precombine="DateINT")
+                  recordkey="DateINT", psrecombine="DateINT")
     create_table(spark, "dim_date", path)
 
 
-if __name__ == "__main__":
-    spark = create_spark_session("Warehouse_FaoStat")
-    path = "s3a://gold/warehouse/dim_dates"
+def DimDateGold(path):
+    spark = create_spark_session("DimDate")
     create_dim_date(spark, path)
     spark.stop()
