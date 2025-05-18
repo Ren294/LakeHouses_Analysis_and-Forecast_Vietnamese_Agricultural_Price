@@ -42,6 +42,14 @@ dim_paths = {
     "Dim_Province_path": Dim_Province_path
 }
 
+predict_paths = {
+    "Predict_Crop_Price_path": "s3a://predict//predict_crop_price"
+}
+
+all_crop_codes = [217,560,156,507,56,125,574,176,571,667,116,122,393,656,
+    27,687,567,358,490,289,242,236,403]
+
+[486, 449, 689, 249]
 def Faostat_paths():
     return faostat_paths
 
@@ -55,3 +63,9 @@ def Weather_paths():
 
 def Dim_paths():
     return dim_paths
+
+def Predict_paths():
+    return predict_paths
+
+def get_all_crop_codes():
+    return all_crop_codes
