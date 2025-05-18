@@ -9,6 +9,8 @@ import pandas as pd
 from datetime import datetime
 import json
 import requests
+from pyspark.sql import Window
+from pyspark.sql.functions import col, row_number
 
 
 def read_data_crops():
@@ -19,6 +21,7 @@ def read_data_crops():
     return pd.DataFrame(items)
 
 
+    
 def process_and_write_data(spark, path):
     item_filter_list = get_selected_items_faostat()
 
@@ -101,7 +104,17 @@ def process_and_write_data(spark, path):
         .withColumnRenamed("Item", "Crops")
         .withColumnRenamed("Description", "Crop_Description")
         .withColumnRenamed("Item_Code", "Crops_Code")
+        .withColumn("Crops_Code", col("Crops_Code").cast("int"))
         .withColumn("Category", mapping_expr.getItem(F.col("Crops")))
+    )
+
+    window_spec = Window.partitionBy("Crops").orderBy(col("Crops_Code").asc())
+
+    filtered_df = (
+        filtered_df
+        .withColumn("rn", row_number().over(window_spec))
+        .filter(col("rn") == 1)
+        .drop("rn")
     )
 
     write_to_hudi(filtered_df, "dim_crops", path,
