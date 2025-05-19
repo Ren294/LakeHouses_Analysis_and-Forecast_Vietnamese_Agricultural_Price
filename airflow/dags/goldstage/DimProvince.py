@@ -45,10 +45,9 @@ def create_dim_province(spark, path):
     df["ProvinceName"] = [provinces[name] for name in df['ProvinceNameUtf8']]
     df['Timestamp'] = datetime.now()
     df['Area'] = df['Area'].replace({',': ''}, regex=True).astype(float)
-    df['ProvinceCode'] = [f"{code:02}" for code in df['ProvinceCode']]
+    df['ProvinceCode'] = df['ProvinceCode'].astype(int)
     df = df.drop(['Density', 'Urban', 'HDI', 'GDP',
                  'Population', 'Center'], axis=1)
-
     spark_df = spark.createDataFrame(df)
     write_to_hudi(spark_df, "dim_province", path, recordkey="ProvinceCode", precombine="Timestamp")
     create_table(spark, "dim_province", path)
