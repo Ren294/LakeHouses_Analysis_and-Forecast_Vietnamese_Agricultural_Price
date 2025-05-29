@@ -14,24 +14,48 @@ def WeatherSilver(inputpath, outputpath):
     while (year > 1990):
         try:
             spark_df = read_from_hudi(spark, year, inputpath)
-            final_df = spark_df if final_df is None else final_df.union(
-                spark_df)
+            
+            if final_df is None:
+                final_df = spark_df
+            else:
+                common_cols = list(set(final_df.columns) & set(spark_df.columns))
+                final_df = final_df.select(common_cols).unionByName(spark_df.select(common_cols))
+
             print(f"Complet merge weather table in {year}")
             year = year - 1
         except Exception as e:
+            print(f"Error in year {year}: {e}")
             year = year - 1
+
 
     columns = ["cities", "datetime", "tempmax", "tempmin", "temp", "windgust", "windspeed",
                "winddir", "dew", "humidity", "precip", "precipprob", "precipcover", "uvindex", "solarenergy", "severerisk"]
 
-    final_df = final_df.select(columns)\
+    final_df = final_df\
+        .select(
+            col("cities").cast("string"),
+            col("datetime").cast("string"),
+            col("tempmax").cast("float"),
+            col("tempmin").cast("float"),
+            col("temp").cast("float"),
+            col("windgust").cast("float"),
+            col("windspeed").cast("float"),
+            col("winddir").cast("float"),
+            col("dew").cast("float"),
+            col("humidity").cast("float"),
+            col("precip").cast("float"),
+            col("precipprob").cast("float"),
+            col("precipcover").cast("float"),
+            col("uvindex").cast("int"),
+            col("solarenergy").cast("float"),
+            col("severerisk").cast("int")
+        )\
         .selectExpr([f"`{col}` as `{col.capitalize()}`" for col in columns])\
-        .withColumnRenamed("Cities", "ProviceName")\
-        .withColumn("ProviceName", F.regexp_replace(F.col("ProviceName"), "Đ", "D"))\
-        .withColumn("recordId", F.concat(F.col("ProviceName"),F.lit("_"),  F.col("Datetime")))
-    final_df.printSchema()
+        .withColumnRenamed("Cities", "ProvinceName")\
+        .withColumn("ProvinceName", F.regexp_replace(F.col("ProvinceName"), "Đ", "D"))\
+        .withColumn("recordId", F.concat(F.col("ProvinceName"),F.lit("_"),  F.col("Datetime")))
     write_to_hudi(final_df, "weather_merged", outputpath,
-                  partitionpath="ProviceName", precombine="Datetime", recordkey="recordId")
+                  partitionpath="ProvinceName", precombine="Datetime", recordkey="recordId")
     spark.stop()
 
 

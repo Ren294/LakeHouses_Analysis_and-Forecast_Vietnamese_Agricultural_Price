@@ -11,19 +11,18 @@ def WeatherGold(inputpath, outputpath):
     spark_df = read_from_hudi(
         spark, inputpath, "weather_merged")
     dim_provice = spark.sql(
-        "SELECT ProviceCode,ProviceName FROM default.dim_provice")
-    spark_df = spark_df.join(dim_provice, on="ProviceName", how="inner")
+        "SELECT ProvinceCode,ProvinceName FROM default.dim_province")
+    spark_df = spark_df.join(dim_provice, on="ProvinceName", how="inner")
     spark_df = spark_df.withColumn("DateInt", F.regexp_replace(
         F.date_format("DateTime", "yyyyMMdd"), "-", "").cast("int"))
-    spark_df = spark_df.drop("ProviceName").drop("recordId")
+    spark_df = spark_df.drop("ProvinceName").drop("recordId")
     spark_df = spark_df.withColumn("recordId", F.concat(
-        F.col("ProviceCode"), F.lit("_"), F.col("DateInt")))
+        F.col("ProvinceCode"), F.lit("_"), F.col("DateInt")))
     spark_df
     write_to_hudi(spark_df, "fact_weather", outputpath,
                   recordkey="recordId", precombine="Datetime")
     create_table(spark, "fact_weather", outputpath)
     spark.stop()
-
 
 # if __name__ == "__main__":
 #     spark = create_spark_session("Warehouse_Weather")
