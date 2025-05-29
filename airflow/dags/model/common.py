@@ -1,12 +1,13 @@
 from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-from pyspark.sql.types import StructType, StructField, StringType, LongType, FloatType
-import faostat
-from pyspark.sql import DataFrame
 from .config import get_config_minio
 import trino
-s3_config = get_config_minio()
+from minio import Minio
 
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LinearRegression
+
+s3_config = get_config_minio()
 
 def create_spark_session(appName):
     warehouse_dir = "s3a://gold/hive/warehouse"
@@ -87,3 +88,51 @@ def trino_connection():
         catalog='hive',        
         schema='default',          
     )   
+
+def minio_client(bucket_name):
+    client = Minio(
+        endpoint="host.docker.internal:9000",
+        access_key=s3_config["access_key"],
+        secret_key=s3_config["secret_key"],
+        secure=False  
+    )
+    if not client.bucket_exists(bucket_name):
+        client.make_bucket(bucket_name)
+
+    return client
+
+def detrend(time_series, trend_model = None):
+    time = np.arange(len(time_series))
+    X_trend = np.vstack([time, time**2]).T
+    if trend_model is None:
+        trend_model = LinearRegression().fit(X_trend, time_series)
+    trend_fit = trend_model.predict(X_trend)
+    time_series_detrended = time_series - trend_fit
+    return time_series_detrended, trend_model
+
+def deseason(time_series, seasonal_avg = None, period = 12):
+    if seasonal_avg is None:
+        seasonal_avg = np.array([time_series[i::period].mean() for i in range(period)])
+    time_series_deseasoned = time_series - np.tile(seasonal_avg, len(time_series) // period + 1)[:len(time_series)]
+    return time_series_deseasoned, seasonal_avg
+
+def scale_minmax(time_series, scaler = None):
+    if scaler is None:
+        scaler = MinMaxScaler()
+        time_series_scaled = scaler.fit_transform(time_series.reshape(-1, 1))
+    else:
+        time_series_scaled = scaler.transform(time_series.reshape(-1, 1))
+    return time_series_scaled , scaler
+
+def inverse_transform(time_series, scaler):
+    return scaler.inverse_transform(np.array(time_series).reshape(-1, 1)).flatten()
+
+def add_season(time_series, seasonal_avg, period = 12):
+    seasonal_pattern = np.tile(seasonal_avg, len(time_series) // period + 1)[:len(time_series)]
+    return time_series + seasonal_pattern
+
+def add_trend(time_series, trend_model, pedict_indx, prediction_length = 24 ):
+    future_time = np.arange(pedict_indx, pedict_indx + prediction_length)
+    future_X_trend = np.vstack([future_time, future_time**2]).T
+    future_trend = trend_model.predict(future_X_trend)
+    return time_series + future_trend
