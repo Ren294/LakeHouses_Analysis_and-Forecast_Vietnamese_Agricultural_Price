@@ -88,7 +88,7 @@ def predict_next(crop_code, seq_length = 6, prediction_length = 24):
     future_preds_rnn = scaler.inverse_transform(np.array(future_preds_rnn).reshape(-1, 1)).reshape(-1)
     future_preds_lstm = scaler.inverse_transform(np.array(future_preds_lstm).reshape(-1, 1)).reshape(-1)
     result = pd.DataFrame({
-        'DateINT': future_dates,
+        'DateINT': [yearmonth*100+1 for yearmonth in future_dates],
         'CropCode': crop_code,
         'PredictRNN': future_preds_rnn,
         'PredictLSTM': future_preds_lstm

@@ -21,12 +21,15 @@ selected_items = [
 
 hyperparameters = {
     "learning_rate": 0.001,
+    "num_lstm_layer": [1 ,2, 3],
+    "units":[32, 64, 128],
     "dropout": 0.1,
     "sequence_length": 6,
+    "sequence_lengths": [6, 12],
     "activation": 'tanh',
     "optimizer": "adam",
     "batch_sizes" : [32, 64],
-    "epoch_list" : [50, 100, 200]
+    "epoch_list" : [100, 200]
 }
 
 all_crop_codes = [217,560,156,507,56,125,574,176,571,667,116,122,393,656,
