@@ -14,19 +14,20 @@ def WeatherSilver(inputpath, outputpath):
     while (year > 1990):
         try:
             spark_df = read_from_hudi(spark, year, inputpath)
-            
+
             if final_df is None:
                 final_df = spark_df
             else:
-                common_cols = list(set(final_df.columns) & set(spark_df.columns))
-                final_df = final_df.select(common_cols).unionByName(spark_df.select(common_cols))
+                common_cols = list(set(final_df.columns) &
+                                   set(spark_df.columns))
+                final_df = final_df.select(common_cols).unionByName(
+                    spark_df.select(common_cols))
 
             print(f"Complet merge weather table in {year}")
             year = year - 1
         except Exception as e:
             print(f"Error in year {year}: {e}")
             year = year - 1
-
 
     columns = ["cities", "datetime", "tempmax", "tempmin", "temp", "windgust", "windspeed",
                "winddir", "dew", "humidity", "precip", "precipprob", "precipcover", "uvindex", "solarenergy", "severerisk"]
@@ -53,7 +54,7 @@ def WeatherSilver(inputpath, outputpath):
         .selectExpr([f"`{col}` as `{col.capitalize()}`" for col in columns])\
         .withColumnRenamed("Cities", "ProvinceName")\
         .withColumn("ProvinceName", F.regexp_replace(F.col("ProvinceName"), "Đ", "D"))\
-        .withColumn("recordId", F.concat(F.col("ProvinceName"),F.lit("_"),  F.col("Datetime")))
+        .withColumn("recordId", F.concat(F.col("ProvinceName"), F.lit("_"),  F.col("Datetime")))
     write_to_hudi(final_df, "weather_merged", outputpath,
                   partitionpath="ProvinceName", precombine="Datetime", recordkey="recordId")
     spark.stop()
