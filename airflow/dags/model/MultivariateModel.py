@@ -30,19 +30,28 @@ activation = hyperparameters['activation']
 learning_rate = hyperparameters['learning_rate']
 epoch_list = hyperparameters['epoch_list']
 units_list = hyperparameters['units']
+features = ["Price", "Temp", "Humidity", "Precip", "Solarenergy"]
 
 def load_crop_data(crop_code):
     sql_query = f"""
         SELECT  ff.ProducerPrice_LCU_tonne_LCU_month as Price,
+        		fw.Temp, fw.Humidity, fw.Precip, fw.Solarenergy,
                 dd.YearMonth,
                 dd.Date,
                 ff.CropCode
-        FROM fact_faostat AS ff           
+        FROM "default".fact_faostat AS ff           
             JOIN (SELECT DateINT,YearMonth, Date 
-                    FROM dim_date
+                    FROM "default".dim_date
                     WHERE Date >= DATE'2011-01-01' 
                         AND Date <= DATE '2023-12-01') AS dd
                 ON dd.DateINT = ff.DateINT
+            JOIN (
+            		Select dateint, Avg(temp) as Temp, Avg(humidity) as Humidity, 
+            			Avg(precip) as Precip, Avg(solarenergy) as Solarenergy
+					FROM"default".fact_weather 
+					group by dateint
+				)AS fw
+                ON fw.DateINT = ff.DateINT
         WHERE ProducerPrice_SLC_tonne_SLC_month IS NULL
             AND ff.CropCode = {crop_code}
         ORDER BY dd.YearMonth
@@ -51,14 +60,19 @@ def load_crop_data(crop_code):
 
     df_pandas.interpolate(method='linear', inplace=True, limit_direction='both')
 
-    time_series = df_pandas['Price'].values
+    time_series = df_pandas[features].values
 
     return time_series
 
 def preprocess_data(time_series):
-    time_series_detrended, trend_model = detrend(time_series)
+    time_series_price = time_series[:, 0]  # Extract the Price column 
+
+    time_series_detrended, trend_model = detrend(time_series_price)
     time_series_deseasoned, seasonal_avg =  deseason(time_series_detrended)
-    time_series_scaled, scaler = scale_minmax(time_series_deseasoned)
+
+    time_series[:, 0] = time_series_deseasoned  # Replace the Price column with deseasoned data
+    time_series_scaled, scaler = scale_minmax(time_series)
+    
     return time_series_scaled, trend_model, seasonal_avg, scaler
 
 def build_model_rnn(hp, input_shape):
@@ -68,13 +82,11 @@ def build_model_rnn(hp, input_shape):
     units = hp.Choice(f'units', units_list)
     dropout = 0.1
 
+    model.add(Input(shape=input_shape))
     for i in range(num_rnn_layer):
-        return_sequences = (i < 2)
-        if i == 0:
-            model.add(SimpleRNN(units, activation='tanh',
-                           return_sequences=return_sequences, input_shape=input_shape))
-        else:
-            model.add(SimpleRNN(units, activation='tanh',
+        return_sequences = (i < num_rnn_layer - 1)
+
+        model.add(SimpleRNN(units, activation='tanh',
                            return_sequences=return_sequences))
         if dropout > 0:
             model.add(Dropout(dropout))
@@ -89,13 +101,11 @@ def build_model_lstm(hp, input_shape):
     units = hp.Choice(f'units', units_list)
     dropout = 0.1
 
+    model.add(Input(shape=input_shape))
     for i in range(num_lstm_layer):
-        return_sequences = (i < 2)
-        if i == 0:
-            model.add(LSTM(units, activation='tanh',
-                           return_sequences=return_sequences, input_shape=input_shape))
-        else:
-            model.add(LSTM(units, activation='tanh',
+        return_sequences = (i < num_lstm_layer - 1)
+        
+        model.add(LSTM(units, activation='tanh',
                            return_sequences=return_sequences))
         if dropout > 0:
             model.add(Dropout(dropout))
@@ -118,10 +128,10 @@ def tune_and_train(time_series, model_type='lstm', crop_code = ''):
         y_train = time_series[:split_index]
         y_val = time_series[split_index:]
 
-        train_gen = TimeseriesGenerator(y_train, y_train, length=seq_len, batch_size=16)
-        val_gen = TimeseriesGenerator(y_val, y_val, length=seq_len, batch_size=16)
+        train_gen = TimeseriesGenerator(y_train, y_train[:, 0], length=seq_len, batch_size=16)
+        val_gen = TimeseriesGenerator(y_val, y_val[:, 0], length=seq_len, batch_size=16)
 
-        input_shape = (seq_len, 1)
+        input_shape = (seq_len, len(features))
 
         tuner = kt.GridSearch(
             hypermodel=lambda hp: build_model_lstm(hp, input_shape),
@@ -155,7 +165,7 @@ def save_model(crop_code, model, hp, trend_model, seasonal_avg, scaler, model_ty
     bucket_name = "models"
     client = minio_client(bucket_name)
 
-    prefix = f'/v1/{crop_code}/'
+    prefix = f'/v3/{crop_code}/'
 
     # 1. Save model
     model_path = os.path.join(tempfile.gettempdir(), f"model_{model_type}.keras")
@@ -189,6 +199,9 @@ def train_crop_model(crop_code, model_type):
     time_series = load_crop_data(crop_code)
     
     time_series, trend_model, seasonal_avg, scaler= preprocess_data(time_series)
+
+    print(f"INFO - time_series.shape: {time_series.shape}")
+    
     best_model, best_result = tune_and_train(time_series)
     save_model(crop_code, best_model, best_result, trend_model, seasonal_avg, scaler, model_type)
 

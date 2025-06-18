@@ -113,19 +113,25 @@ def detrend(time_series, trend_model = None):
 def deseason(time_series, seasonal_avg = None, period = 12):
     if seasonal_avg is None:
         seasonal_avg = np.array([time_series[i::period].mean() for i in range(period)])
-    time_series_deseasoned = time_series - np.tile(seasonal_avg, len(time_series) // period + 1)[:len(time_series)]
+    time_series_deseasoned = time_series - \
+        np.tile(seasonal_avg, len(time_series) // period + 1)[:len(time_series)]
     return time_series_deseasoned, seasonal_avg
 
 def scale_minmax(time_series, scaler = None):
+    if time_series.ndim == 1:
+        time_series = time_series.reshape(-1, 1)
     if scaler is None:
         scaler = MinMaxScaler()
-        time_series_scaled = scaler.fit_transform(time_series.reshape(-1, 1))
+        time_series_scaled = scaler.fit_transform(time_series)
     else:
-        time_series_scaled = scaler.transform(time_series.reshape(-1, 1))
+        time_series_scaled = scaler.transform(time_series)
     return time_series_scaled , scaler
 
 def inverse_transform(time_series, scaler):
-    return scaler.inverse_transform(np.array(time_series).reshape(-1, 1)).flatten()
+    if time_series.ndim == 1:
+        time_series = time_series.reshape(-1, 1)
+        return scaler.inverse_transform(np.array(time_series)).flatten()
+    return scaler.inverse_transform(np.array(time_series))
 
 def add_season(time_series, seasonal_avg, period = 12):
     seasonal_pattern = np.tile(seasonal_avg, len(time_series) // period + 1)[:len(time_series)]
@@ -136,3 +142,18 @@ def add_trend(time_series, trend_model, pedict_indx, prediction_length = 24 ):
     future_X_trend = np.vstack([future_time, future_time**2]).T
     future_trend = trend_model.predict(future_X_trend)
     return time_series + future_trend
+
+def scale_custom_range(time_series):
+    time_series = np.array(time_series, dtype=np.float32)
+    original_first = time_series[0]
+    scale_min = 0.02 * original_first
+    scale_max = original_first
+
+    data_min = time_series.min()
+    data_max = time_series.max()
+
+    # Min-max scaling về [scale_min, scale_max]
+    scaled_series = scale_min + (time_series - data_min) * (scale_max - scale_min) / (data_max - data_min)
+
+    return np.array(scaled_series)
+       
