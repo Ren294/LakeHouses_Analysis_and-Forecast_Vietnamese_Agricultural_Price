@@ -18,10 +18,16 @@ def GSOGold(inputpath, outputpath):
         "DateInt",
         F.concat(F.col("year"), F.lit("0101")).cast("int")
     )
-    dim_provice = spark.sql("SELECT ProviceCode,ProviceName FROM default.dim_provice")\
-        .withColumn("ProviceName", F.regexp_replace(F.col("ProviceName"), " ", ""))
-    df = df.join(dim_provice, on=dim_provice.ProviceName == df.cities, how="inner")\
-        .drop("crop").drop("year").drop("ProviceName").drop('cities').drop('record_id')\
+
+    df = df.withColumn(
+    "cities",
+    when(col("cities") == "HoChiMinhcity", "HoChiMinh").otherwise(col("cities"))
+)
+    dim_provice = spark.sql("SELECT ProvinceCode,ProvinceName FROM default.dim_province")\
+        .withColumn("ProvinceName", F.regexp_replace(F.col("ProvinceName"), " ", ""))
+    df = df.join(dim_provice, on=dim_provice.ProvinceName == df.cities, how="inner")\
+        .drop("crop").drop("year").drop("ProvinceName").drop('cities').drop('record_id')\
+        .withColumnRenamed("ProvinceCode", "ProviceCode") \
         .withColumn(
         "recordId",
         F.concat_ws("_", F.col("DateInt"), F.col(
