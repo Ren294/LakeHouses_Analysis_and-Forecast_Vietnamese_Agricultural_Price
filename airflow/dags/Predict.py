@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 from pyspark.sql import functions as F
 import faostat
-from model.PredictCropPrice2 import predict_crop_price
+from model.PredictMultivariate import predict_crop_price
 from config import get_all_crop_codes, Predict_paths
 
 predict_paths = Predict_paths()

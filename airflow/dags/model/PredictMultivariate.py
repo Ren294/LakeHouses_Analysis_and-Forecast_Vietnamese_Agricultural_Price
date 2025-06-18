@@ -24,20 +24,28 @@ from tensorflow.keras.optimizers import Adam, RMSprop
 from .common import write_to_hudi, create_spark_session, trino_connection, create_table, minio_client,\
      detrend, deseason, scale_minmax, inverse_transform, add_season, add_trend, scale_custom_range
 from .config import get_all_crop_codes
-
+features = ['Price', 'Temp', 'Humidity', 'Precip', 'Solarenergy']
 
 def load_crop_data(crop_code):
     sql_query = f"""
         SELECT  ff.ProducerPrice_LCU_tonne_LCU_month as Price,
+        		fw.Temp, fw.Humidity, fw.Precip, fw.Solarenergy,
                 dd.dateint,
                 dd.Date,
                 ff.CropCode
-        FROM fact_faostat AS ff           
+        FROM "default".fact_faostat AS ff           
             JOIN (SELECT DateINT,YearMonth, Date 
-                    FROM dim_date
+                    FROM "default".dim_date
                     WHERE Date >= DATE'2011-01-01' 
-                        AND Date <= DATE '2023-12-01') AS dd
+                        AND Date <= DATE '2028-12-01') AS dd
                 ON dd.DateINT = ff.DateINT
+            JOIN (
+            		Select dateint, Avg(temp) as Temp, Avg(humidity) as Humidity, 
+            			Avg(precip) as Precip, Avg(solarenergy) as Solarenergy
+					FROM"default".fact_weather 
+					group by dateint
+				)AS fw
+                ON fw.DateINT = ff.DateINT
         WHERE ProducerPrice_SLC_tonne_SLC_month IS NULL
             AND ff.CropCode = {crop_code}
         ORDER BY dd.YearMonth
@@ -48,7 +56,7 @@ def load_crop_data(crop_code):
 
 def load_models(crop_code):
     bucket_name = "models"
-    prefix = f"v1/{crop_code}/" 
+    prefix = f"v3/{crop_code}/" 
     client = minio_client(bucket_name)
     tmpdir = tempfile.mkdtemp()
 
@@ -67,29 +75,47 @@ def load_models(crop_code):
 
     return model, hyperparams, trend_model, seasonal_avg, scaler
 
-def preprocess_data(time_series, trend_model, seasonal_avg, scaler):
-    time_series_detrended, _ = detrend(time_series, trend_model)
-    time_series_deseasoned, _ =  deseason(time_series_detrended, seasonal_avg)
-    time_series_scaled, _  = scale_minmax(time_series_deseasoned, scaler)
-    return time_series_scaled
+def preprocess_data(data, trend_model, seasonal_avg, scaler):
+    price = data[:, 0]
+    price_detrended, _ = detrend(price, trend_model)
+    price_deseasoned, _ = deseason(price_detrended, seasonal_avg)
+    data[:, 0] = price_deseasoned 
+    data_scaled, _ = scale_minmax(data, scaler)
+    return data_scaled
+
 
 def repreprocess_data(time_series, trend_model, seasonal_avg, scaler, pedict_indx, prediction_length):
-    if time_series.min() < 0:
-        time_series = scale_custom_range(time_series.reshape(-1)).reshape(-1, 1)
-    time_series_inversed = inverse_transform(time_series, scaler)
+
+    n_preds = time_series.shape[0]
+    dummy_input = np.zeros((n_preds, 5)) 
+    dummy_input[:, 0] = time_series.flatten()
+    full_inversed  = inverse_transform(dummy_input, scaler)
+    time_series_inversed = full_inversed[:, 0].reshape(-1)
+    
+    #time_series_inversed = inverse_transform(time_series, scaler)
     time_series_addseasoned =  add_season(time_series_inversed, seasonal_avg)
     time_series_addtrended = add_trend(time_series_addseasoned, trend_model, pedict_indx, prediction_length)
     return time_series_addtrended
 
+def create_sequences(data, seq_length):
+    X = []
+    for i in range(len(data) - seq_length):
+        X.append(data[i:i+seq_length])
+    return np.array(X)
 
 def predict_next(crop_code, seq_length = 12, prediction_length = 60):
     model, hyperparams, trend_model, seasonal_avg, scaler = load_models(crop_code)
 
+    seq_length = hyperparams['seq_len']
+
     df = load_crop_data(crop_code)
     
-    scaled_prices = preprocess_data(df[['Price']].values.flatten(), trend_model, seasonal_avg, scaler)
-    pedict_indx = len(scaled_prices)
-    last_seq = scaled_prices[-seq_length:].reshape(1, seq_length, 1)
+    data = df[features].values
+    scaled_data = preprocess_data(data, trend_model, seasonal_avg, scaler)
+
+    pedict_indx = len(scaled_data)
+
+    last_seq = scaled_data[-seq_length:].reshape(1, seq_length, -1)
 
     future_preds = []
     future_dates = []
@@ -101,6 +127,9 @@ def predict_next(crop_code, seq_length = 12, prediction_length = 60):
     
         future_preds.append(pred_lstm)
 
+        last_weather = last_seq[0, -1, 1:] 
+        new_input = np.append(pred_lstm, last_weather).reshape(1, 1, -1)
+
         last_year = int(str(last_dateint)[:4])
         last_month = int(str(last_dateint)[4:6])
         new_month = last_month + 1
@@ -110,21 +139,24 @@ def predict_next(crop_code, seq_length = 12, prediction_length = 60):
         next_dateint = int(f"{new_year}{new_month:02d}")
         future_dates.append(next_dateint)
         last_dateint = next_dateint
-        last_seq = np.append(last_seq[:, 1:, :], [[[pred_lstm]]], axis=1)
 
-    future_preds = repreprocess_data(np.array(future_preds).reshape(-1, 1),
-                                      trend_model, seasonal_avg, scaler, pedict_indx, prediction_length).reshape(-1)
+        last_seq = np.append(last_seq[:, 1:, :], new_input, axis=1)
+
+    future_preds = np.array(future_preds).reshape(-1, 1)
+    final_preds = repreprocess_data(future_preds, trend_model, seasonal_avg, scaler,
+                                 pedict_indx, prediction_length).reshape(-1)
     result = pd.DataFrame({
         'DateINT': [yearmonth*100+1 for yearmonth in future_dates],
         'CropCode': crop_code,
-        'PredictLSTM': future_preds
+        'PredictLSTM': final_preds
     })
     result['timestamp'] = datetime.now()
     result['recordId'] = result['CropCode'].astype(str) + "_" + result['DateINT'].astype(str)
     return result
 
 def predict_crop_price(crop_code = None, path = ''):
-    path = 's3a://predict//predict_crop_price2'
+    path = "s3a://predict//predict_crop_price_weather"
+    table_name = "predict_crop_price_weather"
     if crop_code is None:
         crop_codes = get_all_crop_codes()
         predict_data = pd.DataFrame()
@@ -137,9 +169,9 @@ def predict_crop_price(crop_code = None, path = ''):
     spark = create_spark_session("PricePrediction")
     df_spark = spark.createDataFrame(predict_data)
     print("Writing to Hudi")
-    write_to_hudi(df_spark, "predict_crop_price2", path, recordkey="recordId",
+    write_to_hudi(df_spark, table_name, path, recordkey="recordId",
                     precombine="timestamp", mode="append")
     print("Creating table")
-    create_table(spark, "predict_crop_price2", path)
+    create_table(spark, table_name, path)
     print(f"Predict completed for CropCode {crop_code}")
 

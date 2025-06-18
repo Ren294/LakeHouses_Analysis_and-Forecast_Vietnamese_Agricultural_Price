@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 from pyspark.sql import functions as F
 import faostat
-from model.LSTMModel2 import train_crop_model
+from model.MultivariateModel import train_crop_model
 from config import get_all_crop_codes
 
 default_args = {
