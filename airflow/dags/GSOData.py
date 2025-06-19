@@ -44,7 +44,7 @@ silver_gso = PythonOperator(
 )
 
 gold_gso = PythonOperator(
-    task_id="load_faostat_gold",
+    task_id="load_gso_gold",
     python_callable=GSOGold,
     provide_context=True,
     op_kwargs={"inputpath": gso_paths["GSO_silver_path"],
@@ -53,3 +53,4 @@ gold_gso = PythonOperator(
 )
 
 bronze_gso >> silver_gso >> gold_gso
+# silver_gso >> gold_gso

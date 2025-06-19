@@ -12,17 +12,16 @@ from bs4 import BeautifulSoup
 
 
 def create_dim_province(spark, path):
-    url = "https://en.wikipedia.org/wiki/Provinces_of_Vietnam"
+    #url = "https://en.wikipedia.org/wiki/Provinces_of_Vietnam"
+    url = "https://en.wikipedia.org/w/index.php?title=Provinces_of_Vietnam&diff=prev&oldid=1286631665"
+
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    # Find the table containing provinces (usually the first wikitable sortable)
     table = soup.find('table', {'class': 'wikitable sortable'})
 
-    # Extract table headers
     headers = [th.get_text(strip=True) for th in table.find_all('th')]
 
-    # Extract table rows
     data = []
     for row in table.find_all('tr')[1:]:  # Skip header
         cols = row.find_all(['td', 'th'])

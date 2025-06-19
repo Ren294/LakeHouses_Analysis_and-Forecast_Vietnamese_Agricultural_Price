@@ -67,7 +67,7 @@ def create_dim_date(spark, path):
     dim_date_df = generate_dim_date("1970-01-01", "2030-01-01")
     spark_df = spark.createDataFrame(dim_date_df, schema=schema)
     write_to_hudi(spark_df, "dim_date", path,
-                  recordkey="DateINT", psrecombine="DateINT")
+                  recordkey="DateINT", precombine="DateINT")
     create_table(spark, "dim_date", path)
 
 
